@@ -6,7 +6,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 
 
-//juhu! ja sam mali paradajz!
+//juhu! ja sam mali paradajz! jesi
 //TODO sklepati ovo pls
 
 public class Main extends Application {
