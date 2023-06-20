@@ -6,6 +6,9 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 
 
+//juhu! ja sam mali paradajz!
+//TODO sklepati ovo pls
+
 public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) {
