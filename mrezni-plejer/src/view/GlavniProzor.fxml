@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.GlavniProzorController">
+   <children>
+      <MenuBar layoutY="1.0">
+        <menus>
+          <Menu mnemonicParsing="false" text="File">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Close" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Edit">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Delete" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Help">
+            <items>
+              <MenuItem mnemonicParsing="false" text="About" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+      <Pane layoutY="1.0" prefHeight="520.0" prefWidth="200.0" style="-fx-background-color: #ebebeb; -fx-background-radius: 15;">
+         <children>
+            <Label layoutX="80.0" layoutY="32.0" text="DJ Rajko" textFill="#004e98">
+               <font>
+                  <Font name="Segoe UI Bold" size="24.0" />
+               </font>
+            </Label>
+            <ImageView fitHeight="46.0" fitWidth="43.0" layoutX="25.0" layoutY="14.0">
+               <image>
+                  <Image url="@../../../../../../../Downloads/radio(2).png" />
+               </image>
+            </ImageView>
+            <Button fx:id="btnPlejlista" layoutX="25.0" layoutY="204.0" mnemonicParsing="false" onAction="#printaj" prefHeight="30.0" prefWidth="150.0" text="Button" />
+         </children>
+      </Pane>
+      <Pane layoutY="521.0" prefHeight="80.0" prefWidth="900.0" style="-fx-background-color: #c0c0c0;">
+         <children>
+            <ProgressBar id="progresPjesme" fx:id="progresBar" layoutX="300.0" layoutY="48.0" prefHeight="10.0" prefWidth="300.0" progress="0.0" />
+            <ImageView id="mjut" fx:id="mjut" layoutX="438.0" layoutY="14.0" onMouseClicked="#mjutuj">
+               <image>
+                  <Image url="@../../../../../../../Downloads/mute(2).png" />
+               </image>
+            </ImageView>
+         </children>
+      </Pane>
+      <SplitPane dividerPositions="0.7192881745120551" layoutX="200.0" layoutY="1.0" prefHeight="520.0" prefWidth="698.0">
+        <items>
+          <AnchorPane fx:id="glavniPanel" minHeight="0.0" minWidth="0.0" prefHeight="519.0" prefWidth="377.0" />
+          <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+               <children>
+                  <ListView id="listaDrugara" fx:id="listaDrugara" layoutX="-7.0" layoutY="61.0" onMouseClicked="#osvjeziListu" prefHeight="456.0" prefWidth="200.0" style="-fx-background-color: #ebebeb;" />
+                  <Label layoutX="23.0" layoutY="20.0" text="Drugari" textFill="#004e98">
+                     <font>
+                        <Font name="Segoe UI Bold" size="24.0" />
+                     </font>
+                  </Label>
+               </children>
+            </AnchorPane>
+        </items>
+      </SplitPane>
+   </children>
+</AnchorPane>
