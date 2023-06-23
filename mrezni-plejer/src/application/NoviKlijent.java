@@ -1,58 +1,95 @@
 package application;
 
 
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.stage.Stage;
+import javafx.util.Duration;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.net.*;
+//import java.time.Duration;
+import java.time.Instant;
 
-public class NoviKlijent {
+public class NoviKlijent extends Application {
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 8888;
+    private MediaPlayer mediaPlayer;
 
-    public static void main(String[] args) throws LineUnavailableException {
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    @Override
+    public void start(Stage primaryStage) {
+        primaryStage.setTitle("Jukebox Client");
+
+        Button playButton = new Button("Play");
+        playButton.setOnAction(e -> playSong());
+
+        primaryStage.setScene(new Scene(playButton, 200, 100));
+        primaryStage.show();
+    }
+
+    private void playSong() {
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT)) {
             System.out.println("Connected to Jukebox server");
 
-            // Send the request to the server specifying the audio file path
-            OutputStream outputStream = socket.getOutputStream();
-            String audioFilePath = "C:\\\\Users\\\\libor\\\\OneDrive\\\\Desktop\\\\pjesma.mp3\\"; // Replace with your audio file path
-            String request = "play:" + audioFilePath;
-            outputStream.write(request.getBytes(StandardCharsets.UTF_8));
-            outputStream.flush();
+            Instant startTime = synchronizeTime(socket);
 
-            // Receive the audio data from the server and play it
-            InputStream inputStream = socket.getInputStream();
-            AudioFormat format = new AudioFormat(44100, 16, 2, true, true);
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
-            SourceDataLine dataLine = (SourceDataLine) AudioSystem.getLine(info);
-            dataLine.open(format);
-            dataLine.start();
+            // Replace the song path with your desired audio file
+            String audioFilePath = "C:\\Users\\libor\\OneDrive\\Desktop\\pjesma.mp3";
 
-            byte[] buffer = new byte[4096];
-            int bytesRead;
+            Media audioMedia = new Media("file:///" + audioFilePath.replace("\\", "/"));
+            mediaPlayer = new MediaPlayer(audioMedia);
 
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                // Write the received audio data to the audio output
-                dataLine.write(buffer, 0, bytesRead);
-            }
+            long offsetMillis = startTime.toEpochMilli() - Instant.now().toEpochMilli();
+            mediaPlayer.setOnReady(() -> {
+                mediaPlayer.seek(Duration.millis(offsetMillis));
+            });
 
-            dataLine.drain();
-            dataLine.close();
+            mediaPlayer.play();
         } catch (IOException e) {
             System.err.println("Error in the client: " + e.getMessage());
             e.printStackTrace();
         }
     }
-}
 
+
+
+    private Instant synchronizeTime(Socket socket) throws IOException {
+        DatagramSocket timeSocket = new DatagramSocket();
+        InetAddress address = InetAddress.getByName(SERVER_ADDRESS);
+
+        byte[] buffer = new byte[256];
+        DatagramPacket requestPacket = new DatagramPacket(buffer, buffer.length, address, SERVER_PORT);
+        DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
+
+        // Send time synchronization request
+        timeSocket.send(requestPacket);
+
+        // Receive time synchronization response
+        timeSocket.receive(responsePacket);
+        timeSocket.close();
+
+        String response = new String(responsePacket.getData()).trim();
+        long serverTime = Long.parseLong(response);
+        long clientTime = System.currentTimeMillis();
+
+        long timeDiff = serverTime - clientTime;
+        return Instant.now().plusMillis(timeDiff);
+    }
+
+    @Override
+    public void stop() {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+        }
+    }
+}
 
 
 
