@@ -1,5 +1,4 @@
 package application;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -70,12 +69,21 @@ public class CNovi extends Application {
 
     private void playSong(InputStream inputStream) {
         try {
+            DataInputStream dataInputStream = new DataInputStream(inputStream);
+
+            // Read the size of the song data
+            long songSize = dataInputStream.readLong();
+
             byte[] buffer = new byte[8192];
             int bytesRead;
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
+            // Read the song data from the input stream
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 byteArrayOutputStream.write(buffer, 0, bytesRead);
+                if (byteArrayOutputStream.size() >= songSize) {
+                    break;
+                }
             }
 
             byte[] songData = byteArrayOutputStream.toByteArray();
@@ -89,22 +97,25 @@ public class CNovi extends Application {
             File tempFile = File.createTempFile("temp_song", ".mp3");
             FileOutputStream fileOutputStream = new FileOutputStream(tempFile);
             fileOutputStream.write(songData);
-            fileOutputStream.flush();
             fileOutputStream.close();
 
             // Play the temporary file
-            Media media = new Media(tempFile.toURI().toString());
+            String tempFilePath = tempFile.toURI().toString();
+            Media media = new Media(tempFilePath);
             mediaPlayer = new MediaPlayer(media);
             mediaPlayer.play();
 
-            // Delete the temporary file after playback is finished
             mediaPlayer.setOnEndOfMedia(() -> {
+                mediaPlayer.dispose();
                 tempFile.delete();
             });
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+
+
 
     @Override
     public void stop() {

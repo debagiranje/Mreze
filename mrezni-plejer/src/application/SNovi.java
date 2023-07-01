@@ -1,5 +1,4 @@
-package application;
-
+package application; 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -60,11 +59,17 @@ public class SNovi {
     }
 
     private static void sendSongToClient(Socket socket, File songFile) throws IOException {
-        byte[] buffer = new byte[17482];
+        byte[] buffer = new byte[8192];
         FileInputStream fileInputStream = new FileInputStream(songFile);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
         OutputStream outputStream = socket.getOutputStream();
 
+        // Send the size of the song data to the client
+        long songSize = songFile.length();
+        DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
+        dataOutputStream.writeLong(songSize);
+
+        // Send the song data to the client
         int bytesRead;
         while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
             outputStream.write(buffer, 0, bytesRead);
@@ -74,5 +79,7 @@ public class SNovi {
         bufferedInputStream.close();
         fileInputStream.close();
     }
+
+
 }
 
