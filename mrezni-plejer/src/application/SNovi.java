@@ -5,13 +5,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SNovi {
     private static final int SERVER_PORT = 6666;
-    private static final String MUSIC_FOLDER = "C:\\Users\\gulas\\Downloads\\zika\\alt\\";
+    private static final String MUSIC_FOLDER = "C:\\Users\\libor\\OneDrive\\Desktop\\zika";
     private static List<Socket> connectedClients = new ArrayList<>();
     private static boolean isPlaying = false;
-    private static List<String> songQueue = new ArrayList<>();
+    private static BlockingQueue<String> songQueue = new LinkedBlockingQueue<>();
 
     public static void main(String[] args) {
         try {
@@ -26,14 +28,15 @@ public class SNovi {
                 new Thread(() -> {
                     try {
                         DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
-                        String request = dataInputStream.readUTF();
-
-                        if (request.equals("NEXT")) {
-                            // Client requests next song
-                            sendNextSongToClient(socket);
-                        } else {
-                            // Client adds song to the queue
-                            addSongToQueue(request);
+                        String request;
+                        while ((request = dataInputStream.readUTF()) != null) {
+                            if (request.equals("NEXT")) {
+                                // Client requests next song
+                                sendNextSongToClient(socket);
+                            } else {
+                                // Client adds song to the queue
+                                addSongToQueue(request);
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -63,7 +66,7 @@ public class SNovi {
             }
 
             isPlaying = true;
-            String songName = songQueue.remove(0);
+            String songName = songQueue.poll();
             System.out.println("Sending song to client: " + songName);
 
             try {
@@ -126,9 +129,10 @@ public class SNovi {
 
     private static void startPlaying() {
         new Thread(() -> {
-            while (true) {
+            for(Socket s : connectedClients) {
+            	System.out.println(connectedClients.isEmpty());
                 Socket currentSocket;
-                synchronized (connectedClients) {
+                /*synchronized (connectedClients) {
                     if (connectedClients.isEmpty()) {
                         System.out.println("No clients connected. Stopping playback.");
                         isPlaying = false;
@@ -136,13 +140,13 @@ public class SNovi {
                     }
 
                     currentSocket = connectedClients.get(0);
-                }
+                }*/
 
-                sendNextSongToClient(currentSocket);
+                sendNextSongToClient(s);
 
                 try {
                     // Sleep for a while before sending the next song
-                    Thread.sleep(2000);
+                    Thread.sleep(1000); // Adjust the delay as needed
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

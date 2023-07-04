@@ -14,11 +14,12 @@ import java.io.*;
 import java.net.Socket;
 
 public class Main extends Application {
-    private static final String SERVER_IP = " 192.168.56.1"; // Replace with the server IP address
+    private static final String SERVER_IP = "192.168.56.1"; // Replace with the server IP address
     private static final int SERVER_PORT = 6666;
 
     private MediaPlayer mediaPlayer;
     private Socket socket;
+    private Button playNextButton;
 
     @Override
     public void start(Stage primaryStage) {
@@ -26,8 +27,9 @@ public class Main extends Application {
         TextField songTextField = new TextField();
         Button addButton = new Button("Add to Queue");
         Button playButton = new Button("Play");
+        playNextButton = new Button("Play Next");
         Button closeButton = new Button("Close Connection");
-        root.getChildren().addAll(songTextField, addButton, playButton, closeButton);
+        root.getChildren().addAll(songTextField, addButton, playButton, playNextButton, closeButton);
 
         addButton.setOnAction(event -> {
             String songName = songTextField.getText();
@@ -38,6 +40,13 @@ public class Main extends Application {
         });
 
         playButton.setOnAction(event -> {
+            if (mediaPlayer != null && mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
+                mediaPlayer.stop();
+            }
+            requestNextSongFromServer();
+        });
+
+        playNextButton.setOnAction(event -> {
             if (mediaPlayer != null && mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) {
                 mediaPlayer.stop();
             }
@@ -138,11 +147,15 @@ public class Main extends Application {
             mediaPlayer.setOnEndOfMedia(() -> {
                 mediaPlayer.dispose();
                 tempFile.delete();
-                requestNextSongFromServer();
+                enablePlayNextButton();
             });
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void enablePlayNextButton() {
+        Platform.runLater(() -> playNextButton.setDisable(false));
     }
 
     private void closeConnection() {
@@ -160,3 +173,4 @@ public class Main extends Application {
         launch(args);
     }
 }
+
