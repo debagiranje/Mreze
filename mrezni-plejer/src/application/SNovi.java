@@ -14,7 +14,7 @@ public class SNovi {
     private static List<Socket> connectedClients = new ArrayList<>();
     private static boolean isPlaying = false;
     private static BlockingQueue<String> sharedSongQueue = new LinkedBlockingQueue<>();
-    private static List<BlockingQueue<String>> clientQueues = new ArrayList<>();
+    private static List<BlockingQueue<String>> clientQueues = new ArrayList<>(connectedClients.size());
 
     public static void main(String[] args) {
         try {
@@ -30,7 +30,13 @@ public class SNovi {
                     try {
                         DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
                         String request;
-                        while ((request = dataInputStream.readUTF()) != null) {
+                        while (true) {
+                            try {
+                                request = dataInputStream.readUTF();
+                            } catch (EOFException e) {
+                                break; // End the loop when the end of the stream is reached
+                            }
+
                             if (request.equals("NEXT")) {
                                 // Client requests next song
                                 int clientIndex = connectedClients.indexOf(socket);
@@ -47,25 +53,25 @@ public class SNovi {
                         e.printStackTrace();
                     }
                 }).start();
-            }
-        } catch (IOException e) {
+            }}
+                
+
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static void addSongToQueue(String songName) {
-        synchronized (sharedSongQueue) {
-            sharedSongQueue.add(songName);
-            System.out.println("Added to shared queue: " + songName);
-            if (!isPlaying) {
-                startPlaying();
-            } else {
-                updateClientQueues();
-            }
+    private static synchronized void addSongToQueue(String songName) {
+        sharedSongQueue.add(songName);
+        System.out.println("Added to shared queue: " + songName);
+        if (!isPlaying) {
+            startPlaying();
+        } else {
+            updateClientQueues();
         }
     }
 
-    private static void updateClientQueues() {
+    private static synchronized void updateClientQueues() {
         List<BlockingQueue<String>> updatedClientQueues = new ArrayList<>();
         for (Socket socket : connectedClients) {
             BlockingQueue<String> clientSongQueue = new LinkedBlockingQueue<>(sharedSongQueue);
@@ -75,34 +81,32 @@ public class SNovi {
     }
 
     private static void sendNextSongToClient(Socket socket, BlockingQueue<String> clientSongQueue) {
-        synchronized (clientSongQueue) {
-            if (clientSongQueue.isEmpty()) {
-                System.out.println("No more songs in the queue for client: " + socket);
-                return;
-            }
+        if (clientSongQueue.isEmpty()) {
+            System.out.println("No more songs in the queue for client: " + socket);
+            return;
+        }
 
-            String songName = clientSongQueue.poll();
-            System.out.println("Sending song to client: " + songName);
+        String songName = clientSongQueue.poll();
+        System.out.println("Sending song to client: " + songName);
 
-            try {
-                DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-                dataOutputStream.writeUTF(songName);
+        try {
+            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataOutputStream.writeUTF(songName);
+            dataOutputStream.flush();
+
+            File musicFolder = new File(MUSIC_FOLDER);
+            File songFile = findSongFile(musicFolder, songName);
+
+            if (songFile != null) {
+                // Send the song data to the client
+                sendSongToClient(socket, songFile);
+            } else {
+                // Song not found, send error message to the client
+                dataOutputStream.writeUTF("Song not found: " + songName);
                 dataOutputStream.flush();
-
-                File musicFolder = new File(MUSIC_FOLDER);
-                File songFile = findSongFile(musicFolder, songName);
-
-                if (songFile != null) {
-                    // Send the song data to the client
-                    sendSongToClient(socket, songFile);
-                } else {
-                    // Song not found, send error message to the client
-                    dataOutputStream.writeUTF("Song not found: " + songName);
-                    dataOutputStream.flush();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -163,12 +167,12 @@ public class SNovi {
                         sendNextSongToClient(socket, clientSongQueue);
                     }
 
-                    try {
+                    /*try {
                         // Sleep for a while before sending the next song
-                        Thread.sleep(1000); // Adjust the delay as needed
+                        Thread.sleep(10000); // Adjust the delay as needed
                     } catch (InterruptedException e) {
                         e.printStackTrace();
-                    }
+                    }*/
                 }
             }
         }).start();
