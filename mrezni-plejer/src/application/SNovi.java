@@ -13,7 +13,8 @@ public class SNovi {
     private static final String MUSIC_FOLDER = "C:\\Users\\libor\\OneDrive\\Desktop\\zika";
     private static List<Socket> connectedClients = new ArrayList<>();
     private static boolean isPlaying = false;
-    private static BlockingQueue<String> songQueue = new LinkedBlockingQueue<>();
+    private static BlockingQueue<String> sharedSongQueue = new LinkedBlockingQueue<>();
+    private static List<BlockingQueue<String>> clientQueues = new ArrayList<>();
 
     public static void main(String[] args) {
         try {
@@ -32,9 +33,13 @@ public class SNovi {
                         while ((request = dataInputStream.readUTF()) != null) {
                             if (request.equals("NEXT")) {
                                 // Client requests next song
-                                sendNextSongToClient(socket);
+                                int clientIndex = connectedClients.indexOf(socket);
+                                if (clientIndex >= 0 && clientIndex < clientQueues.size()) {
+                                    BlockingQueue<String> clientSongQueue = clientQueues.get(clientIndex);
+                                    sendNextSongToClient(socket, clientSongQueue);
+                                }
                             } else {
-                                // Client adds song to the queue
+                                // Client adds song to the shared queue
                                 addSongToQueue(request);
                             }
                         }
@@ -49,24 +54,34 @@ public class SNovi {
     }
 
     private static void addSongToQueue(String songName) {
-        synchronized (songQueue) {
-            songQueue.add(songName);
-            System.out.println("Added to queue: " + songName);
+        synchronized (sharedSongQueue) {
+            sharedSongQueue.add(songName);
+            System.out.println("Added to shared queue: " + songName);
             if (!isPlaying) {
                 startPlaying();
+            } else {
+                updateClientQueues();
             }
         }
     }
 
-    private static void sendNextSongToClient(Socket socket) {
-        synchronized (songQueue) {
-            if (songQueue.isEmpty()) {
-                System.out.println("No more songs in the queue");
+    private static void updateClientQueues() {
+        List<BlockingQueue<String>> updatedClientQueues = new ArrayList<>();
+        for (Socket socket : connectedClients) {
+            BlockingQueue<String> clientSongQueue = new LinkedBlockingQueue<>(sharedSongQueue);
+            updatedClientQueues.add(clientSongQueue);
+        }
+        clientQueues = updatedClientQueues;
+    }
+
+    private static void sendNextSongToClient(Socket socket, BlockingQueue<String> clientSongQueue) {
+        synchronized (clientSongQueue) {
+            if (clientSongQueue.isEmpty()) {
+                System.out.println("No more songs in the queue for client: " + socket);
                 return;
             }
 
-            isPlaying = true;
-            String songName = songQueue.poll();
+            String songName = clientSongQueue.poll();
             System.out.println("Sending song to client: " + songName);
 
             try {
@@ -129,26 +144,31 @@ public class SNovi {
 
     private static void startPlaying() {
         new Thread(() -> {
-            for(Socket s : connectedClients) {
-            	System.out.println(connectedClients.isEmpty());
-                Socket currentSocket;
-                /*synchronized (connectedClients) {
-                    if (connectedClients.isEmpty()) {
-                        System.out.println("No clients connected. Stopping playback.");
-                        isPlaying = false;
-                        break;
+            clientQueues = new ArrayList<>();
+            for (Socket socket : connectedClients) {
+                BlockingQueue<String> clientSongQueue = new LinkedBlockingQueue<>(sharedSongQueue);
+                clientQueues.add(clientSongQueue);
+            }
+
+            boolean continuePlaying = true;
+            while (continuePlaying) {
+                continuePlaying = false;
+                for (int i = 0; i < connectedClients.size(); i++) {
+                    Socket socket = connectedClients.get(i);
+                    BlockingQueue<String> clientSongQueue = clientQueues.get(i);
+                    if (clientSongQueue.isEmpty()) {
+                        System.out.println("No more songs in the queue for client: " + socket);
+                    } else {
+                        continuePlaying = true;
+                        sendNextSongToClient(socket, clientSongQueue);
                     }
 
-                    currentSocket = connectedClients.get(0);
-                }*/
-
-                sendNextSongToClient(s);
-
-                try {
-                    // Sleep for a while before sending the next song
-                    Thread.sleep(1000); // Adjust the delay as needed
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    try {
+                        // Sleep for a while before sending the next song
+                        Thread.sleep(1000); // Adjust the delay as needed
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }).start();
